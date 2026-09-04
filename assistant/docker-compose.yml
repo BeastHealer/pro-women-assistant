@@ -1,0 +1,6 @@
+# DEPRECATED: use ../docker-compose.yml from pro-women-assistant/
+# This file is kept only as a pointer so old paths fail loudly.
+#
+#   cd ../ && docker compose up -d --build
+
+services: {}

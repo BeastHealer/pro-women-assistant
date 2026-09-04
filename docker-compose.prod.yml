@@ -1,0 +1,41 @@
+# Production overlay for Beget VPS.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile with-nginx up -d --build
+#
+# Base compose already binds backends to 127.0.0.1; this file adds logging + prod nginx.
+
+services:
+  n8n:
+    environment:
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-true}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  parser-api:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  assistant:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    profiles: ["with-nginx"]
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

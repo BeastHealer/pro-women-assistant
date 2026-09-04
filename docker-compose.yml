@@ -1,0 +1,92 @@
+# Compose root: pro-women-assistant/
+# Sibling parser data: ../tg_vk_parser
+#
+# Usage:
+#   cd pro-women-assistant
+#   docker compose up -d --build
+#   # optional HTTPS reverse-proxy:
+#   docker compose --profile with-nginx up -d
+
+version: "3.8"
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: pro-women-n8n
+    ports:
+      # localhost only — публичный доступ через nginx (prod) / Beget firewall
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme}
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678}
+      - GENERIC_TIMEZONE=Europe/Moscow
+      - N8N_RUNNERS_ENABLED=true
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+    networks:
+      - pro-women-network
+
+  parser-api:
+    build:
+      context: ..
+      dockerfile: pro-women-assistant/parser_api/Dockerfile
+    container_name: pro-women-parser
+    ports:
+      # host 8001 — на Beget :8000 часто занят gunicorn панели
+      - "127.0.0.1:8001:8000"
+    volumes:
+      - ../tg_vk_parser:/app/tg_vk_parser
+    environment:
+      - PARSER_DB_PATH=/app/tg_vk_parser/data/images.db
+      - TG_VK_PARSER_ROOT=/app/tg_vk_parser
+      - ARCHIVE_INDEX_PATH=/app/tg_vk_parser/data/archive_index.faiss
+      - ARCHIVE_METADATA_PATH=/app/tg_vk_parser/data/archive_metadata.json
+      - CLIP_MODEL_NAME=${CLIP_MODEL_NAME:-openai/clip-vit-base-patch32}
+    restart: unless-stopped
+    networks:
+      - pro-women-network
+
+  assistant:
+    build:
+      context: .
+      dockerfile: assistant/Dockerfile
+    container_name: pro-women-assistant
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
+    environment:
+      - PARSER_API_URL=http://parser-api:8000
+    depends_on:
+      - parser-api
+      - n8n
+    restart: unless-stopped
+    networks:
+      - pro-women-network
+
+  nginx:
+    profiles: ["with-nginx"]
+    image: nginx:alpine
+    container_name: pro-women-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - assistant
+      - n8n
+    restart: unless-stopped
+    networks:
+      - pro-women-network
+
+volumes:
+  n8n_data:
+
+networks:
+  pro-women-network:
+    driver: bridge

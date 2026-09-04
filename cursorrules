@@ -1,0 +1,24 @@
+# Проект: Контент-ассистент PRO Женщин Москва
+
+## Стек
+- Python 3.11+
+- FastAPI + uvicorn
+- n8n (self-hosted)
+- GigaChat API
+- VK API
+- yonote.ru API (RPC)
+- Senler Webhooks
+- SQLite (через tg_vk_parser)
+
+## Правила
+- Type hints обязательны
+- Docstrings в Google style
+- Логирование через logging модуль
+- Секреты только через .env
+- Асинхронный код где возможно (asyncio, httpx)
+
+## Конвенции именования
+- Функции: snake_case
+- Классы: PascalCase
+- Константы: UPPER_SNAKE_CASE
+- Эндпоинты: kebab-case
